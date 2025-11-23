@@ -3,9 +3,22 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
+const gm = require('gm').subClass({ imageMagick: true });
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
+
+// Ensure uploads and tmp directories exist
+const uploadsDir = path.join(__dirname, 'uploads');
+const tmpDir = path.join(__dirname, 'tmp');
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
+// Enable CORS
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -23,28 +36,26 @@ const upload = multer({
     limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
 });
 
-// Routes
-const adminRoute = require('./routes/admin');
+// Import Routes
 const mergeRoute = require('./routes/merge');
 const splitRoute = require('./routes/split');
 const compressRoute = require('./routes/compress');
 const rotateRoute = require('./routes/rotate');
 const imageToPdfRoute = require('./routes/imageToPdf');
+const pdfToImageRoute = require('./routes/pdfToImage');
 const watermarkRoute = require('./routes/watermark');
-const passwordRoute = require('./routes/password');
 const extractTextRoute = require('./routes/extractText');
 const deletePagesRoute = require('./routes/deletePages');
 const reorderPagesRoute = require('./routes/reorderPages');
 
-app.use('/api/admin', adminRoute);
+// Use Routes
 app.use('/api/merge', mergeRoute(upload));
 app.use('/api/split', splitRoute(upload));
 app.use('/api/compress', compressRoute(upload));
 app.use('/api/rotate', rotateRoute(upload));
-// app.use('/api/pdf-to-image', pdfToImageRoute(upload)); // Moved to client-side
 app.use('/api/image-to-pdf', imageToPdfRoute(upload));
+app.use('/api/pdf-to-image', pdfToImageRoute(upload));
 app.use('/api/watermark', watermarkRoute(upload));
-app.use('/api/password', passwordRoute(upload));
 app.use('/api/extract-text', extractTextRoute(upload));
 app.use('/api/delete-pages', deletePagesRoute(upload));
 app.use('/api/reorder-pages', reorderPagesRoute(upload));
@@ -55,10 +66,16 @@ app.get('/api/download', (req, res) => {
     if (!fileName) {
         return res.status(400).json({ error: 'File name required' });
     }
-    const filePath = path.join(uploadsDir, fileName);
+    // Check in both uploads and tmp
+    let filePath = path.join(uploadsDir, fileName);
+    if (!fs.existsSync(filePath)) {
+        filePath = path.join(tmpDir, fileName);
+    }
+
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: 'File not found' });
     }
+
     res.download(filePath, (err) => {
         if (err) {
             console.error('Download error:', err);
@@ -71,7 +88,13 @@ app.post('/api/cleanup', (req, res) => {
     const { files } = req.body;
     if (files && Array.isArray(files)) {
         files.forEach(file => {
-            const filePath = path.join(uploadsDir, file);
+            // Try deleting from uploads
+            let filePath = path.join(uploadsDir, file);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            // Try deleting from tmp
+            filePath = path.join(tmpDir, file);
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
             }
@@ -86,12 +109,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`PDF Editor Server running on port ${PORT}`);
-        console.log(`Uploads directory: ${uploadsDir}`);
-    });
-}
+app.listen(PORT, () => {
+    console.log(`PDF Editor Server running on port ${PORT}`);
+});
 
 module.exports = app;
 

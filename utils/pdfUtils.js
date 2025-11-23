@@ -1,12 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const { PDFDocument } = require('pdf-lib');
 
-// Clean up temporary files
-function cleanupFiles(filePaths) {
-    if (!Array.isArray(filePaths)) {
-        filePaths = [filePaths];
-    }
-    
+const cleanupFiles = (filePaths) => {
+    if (!filePaths || !Array.isArray(filePaths)) return;
+
     filePaths.forEach(filePath => {
         try {
             if (fs.existsSync(filePath)) {
@@ -16,40 +14,39 @@ function cleanupFiles(filePaths) {
             console.error(`Error deleting file ${filePath}:`, error);
         }
     });
-}
+};
 
-// Get file size in MB
-function getFileSize(filePath) {
-    const stats = fs.statSync(filePath);
-    return (stats.size / (1024 * 1024)).toFixed(2);
-}
+const validatePDF = (filePath) => {
+    try {
+        if (!fs.existsSync(filePath)) {
+            return { valid: false, error: 'File does not exist' };
+        }
+        // Basic check for PDF header
+        const buffer = Buffer.alloc(5);
+        const fd = fs.openSync(filePath, 'r');
+        fs.readSync(fd, buffer, 0, 5, 0);
+        fs.closeSync(fd);
 
-// Validate PDF file
-function validatePDF(filePath) {
-    if (!fs.existsSync(filePath)) {
-        return { valid: false, error: 'File does not exist' };
+        if (buffer.toString() !== '%PDF-') {
+            return { valid: false, error: 'Invalid PDF header' };
+        }
+        return { valid: true };
+    } catch (error) {
+        return { valid: false, error: error.message };
     }
-    
-    const buffer = fs.readFileSync(filePath);
-    // Check PDF magic number
-    if (buffer.slice(0, 4).toString() !== '%PDF') {
-        return { valid: false, error: 'Invalid PDF file' };
-    }
-    
-    return { valid: true };
-}
+};
 
-// Generate unique filename
-function generateFilename(prefix, extension) {
-    const timestamp = Date.now();
-    const random = Math.round(Math.random() * 1E9);
-    return `${prefix}-${timestamp}-${random}${extension}`;
-}
+const getFileSize = (filePath) => {
+    try {
+        const stats = fs.statSync(filePath);
+        return stats.size;
+    } catch (error) {
+        return 0;
+    }
+};
 
 module.exports = {
     cleanupFiles,
-    getFileSize,
     validatePDF,
-    generateFilename
+    getFileSize
 };
-
