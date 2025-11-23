@@ -1,27 +1,21 @@
 {
-  "name": "pdf-editor-local",
-  "version": "1.0.0",
-  "description": "Local PDF editing website with all features",
-  "main": "server/server.js",
-  "scripts": {
-    "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
-  },
-  "keywords": ["pdf", "editor", "local"],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
-    "pdf-lib": "^1.17.1",
-    "pdf-parse": "^1.1.1",
-    "sharp": "^0.32.6",
-    "cors": "^2.8.5",
-    "archiver": "^6.0.1",
-    "pdf2pic": "^3.1.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
-  }
+    "name": "pdf-editor-backend",
+    "version": "1.0.0",
+    "description": "Backend for PDF Editor Pro",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "archiver": "^5.3.1",
+        "cors": "^2.8.5",
+        "express": "^4.18.2",
+        "gm": "^1.23.1",
+        "multer": "^1.4.5-lts.1",
+        "pdf-lib": "^1.17.1",
+        "pdf-parse": "^1.1.1"
+    },
+    "engines": {
+        "node": ">=16.0.0"
+    }
 }
-
